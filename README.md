@@ -1,79 +1,48 @@
-This repository contains a demo of using [Files in Repos](https://docs.databricks.com/repos/work-with-notebooks-other-files.html#work-with-python-and-r-modules) functionality with [Databricks Delta Live Tables (DLT)](https://docs.databricks.com/workflows/delta-live-tables/index.html) to perform unit & integration testing of DLT pipelines.
 
-* [The development workflow](#the-development-workflow)
-* [Setup instructions](#setup-instructions)
-   * [Create necessary Databricks Repos checkouts](#create-necessary-databricks-repos-checkouts)
-   * [Create DLT pipelines](#create-dlt-pipelines)
-   * [Create Databricks cluster](#create-databricks-cluster)
-   * [Create ADO build pipeline](#create-ado-build-pipeline)
-   * [Create ADO release pipeline](#create-ado-release-pipeline)
-   
-# The development workflow
+This repository is based on https://github.com/alexott/dlt-files-in-repos-demo and used to demonstrate running tests locally and against a remote Databricks environment
 
-The development workflow is organized as on following image:
-
-![DLT development workflow](images/cicd-process.png)
-
-More detailed description is available in the blog post [Applying software development & DevOps best practices to Delta Live Table pipelines](https://www.databricks.com/blog/applying-software-development-devops-best-practices-delta-live-table-pipelines). 
-
+It's not productionised code and just used for demonstration purposes. 
 
 # Setup instructions
 
-:construction: Work in progress...
+1. Install JDK 11 locally (e.g. brew install openjdk@11)
+1. Make sure java has been added to your path (see instructions when installing via homebrew)
+1. Download and extract Spark locally: https://spark.apache.org/downloads.html
+1. Run from terminal:
+   `cd <extracted spark directory>`
+   `./sbin/start-connect-server.sh --packages org.apache.spark:spark-connect_2.12:3.5.1` : This will start Spark running locally
+   Optional: `tail -f <<fill in log name from console>>` : This will keep track of the logs coming from spark
+1. Install poetry for Python package management (e.g. `brew install poetry`)
+1. Download dependecies: `poetry init`
 
-:warning: Setup instructions describe process of performing CI/CD using Azure DevOps (ADO), but similar thing could be implemented with any CI/CD technology.
+# Running unit tests
+Unit test run against the local version of spark that has been set up above.
+Note: unit tests shouldn't attempt to read from tables, isolate that code separately and test with integration test.
 
-There are two ways of setting up everything:
+Run from terminal: `export SPARK_REMOTE="sc://localhost" && poetry run pytest tests/unit-local --junit-xml=test-local.xml --cov`
 
-1. using Terraform - it's the easiest way of getting everything configured in a short time.  Just follow instructions in [terraform/azuredevops/](terraform/azuredevops/) folder.  :warning: This doesn't include creation of release pipeline as there is no REST API and Terraform resource for it.
-2. manually - follow instructions below to create all necessary objects.
+These can also be run/debugged from your IDE with 'Pytest Runner for Visual Studio Code' extension
 
+# Running integration tests against a remote spark cluster
+Integration tests run against a remote Databricks cluster and use Spark Connect rather than DB connect
 
-## Create necessary Databricks Repos checkouts
+1. Generate a personal access token in databricks: https://docs.databricks.com/en/dev-tools/auth/pat.html#databricks-personal-access-tokens-for-workspace-users
+1. Get the cluster id for your Databricks cluster, e.g. go to Databricks UI -> Compute -> click on your cluster -> get id from url. If URL is https://myworkspace.databricks.com/compute/clusters/1601-182128-dcbte51m?o=1444828305810485 , the cluster id is 1601-182128-dcbte51m
+1. Set access token as an environment variable, run this from terminal: `export DATABRICKS_TOKEN=<<your personal access token>>`
+1. To run tests: `export SPARK_REMOTE="sc://my-databricks-workspace.databricks.com:443/;token=$DATABRICKS_TOKEN;x-databricks-cluster-id=<<your cluster id>>" && poetry run pytest tests/integration --junit-xml=test-local.xml --cov`
 
-In this example we're using three [checkouts of our sample repository](https://docs.databricks.com/repos/git-operations-with-repos.html#add-a-repo-connected-to-a-remote-repo):
+These can also be run/debugged from your IDE with 'Pytest Runner for Visual Studio Code' extension
 
-1. Development: is used for actual development of the new code, running tests before committing the code, etc.
-1. Staging: will be used to run tests on commits to branches and/or pull requests.  This checkout will be updated to the actual branch to which commit happened.  We're using one checkout just for simplicity, but in real-life we'll need to create such checkouts automatically to allow multiple tests to run in parallel. 
-1. Production: is used to keep the production code - this checkout always will be on the `releases` branch, and will be updated only when commit happens to that branch and all tests are passed.
-
-Here is an example of repos created with Terraform:
-
-![Databricks repos](images/repos.png)
-
-## Create DLT pipelines
-
-We need to create a few DLT pipelines for our work:
-
-1. for main code that is used for development - use only `pipelines/DLT-Pipeline.py` notebook from the development repository.
-1. (optional) for integration test that could be run as part of development - from the development repository use main code notebook (`pipelines/DLT-Pipeline.py`) together with integration test notebook (`tests/integration/DLT-Pipeline-Test.py`).
-1. for integration test running as part of CI/CD pipeline - similar to the previous item, but use the staging repository.
-1. for production pipeline - use only `pipelines/DLT-Pipeline.py` notebook from the production repository.
-
-Here is an example of pipelines created with Terraform:
-
-![Databricks repos](images/dlt-pipelines.png)
-
-## Create Databricks cluster
-
-If you decide to run notebooks with tests located in `tests/unit-notebooks` directory, you will need to [create a Databricks cluster](https://docs.databricks.com/clusters/configure.html) that will be used by the Nutter library.  To speedup tests, attach the `nutter` & `chispa` libraries to the created cluster.
-
-If you don't want to run these tests, comment out in the `azure-pipelines.yml` the block with `displayName` "Execute Nutter tests".
-
-## Create ADO build pipeline
-
-:construction: Work in progress...
-
-The ADO build pipeline consists of the two stages:
-
-- `onPush` is executed on push to any Git branch except `releases` branch and version tags.  This stage only runs & reports unit tests results (both local & notebooks).
-- `onRelease` is executed only on commits to the `releases` branch, and in addition to the unit tests it will execute a DLT pipeline with integration test (see image).
-
-![Stages of ADO build pipeline](images/cicd-stages.png)
-
-
-
-## Create ADO release pipeline
-
-:construction: Work in progress...
+# Notes on using Spark Connect
+- Had issues with dbconnect library not being compatible with pyspark library, which meant it's difficult to run unit-tests locally. To work around this, using Spark Connect instead of DB Connect. See https://docs.databricks.com/en/dev-tools/databricks-connect/python/troubleshooting.html#conflicting-pyspark-installations
+- Need to be using at least 3.4 version of pypark to be able to use Spark Connect (e.g. 3.5.1 used here). More details: https://spark.apache.org/docs/latest/spark-connect-overview.html
+- Need the extra Spark Connect dependencies that aren't included in pyspark by default. See https://spark.apache.org/docs/latest/api/python/getting_started/install.html
+      To get poetry to work with this, needed to add them explicitly:
+      py4j = "^0.10.9.7"
+      pandas = "^1.0.5"
+      pyarrow = "^16.1.0"
+      numpy = "^1.15"
+      grpcio = "^1.48"
+      grpcio-status = "^1.48"
+      googleapis-common-protos="^1.56.4"
 
