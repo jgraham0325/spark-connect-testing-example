@@ -3,9 +3,7 @@ from chispa.dataframe_comparer import assert_df_equality
 from pyspark.sql import SparkSession
 from helpers.columns_helpers import add_missing_columns, columns_except, dataframe_except_columns
 
-@pytest.fixture(scope="module")
-def spark_session():
-    return SparkSession.builder.getOrCreate()
+# Note: spark_session comes from the fixture in conftest.py
 
 def test_columns_except(spark_session):
     original_df = spark_session.createDataFrame(
