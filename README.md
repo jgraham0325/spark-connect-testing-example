@@ -9,9 +9,13 @@ It's not productionised code and just used for demonstration purposes.
 1. Make sure java has been added to your path (see instructions when installing via homebrew)
 1. Download and extract Spark locally: https://spark.apache.org/downloads.html
 1. Run from terminal:
+
    `cd <extracted spark directory>`
+
    `./sbin/start-connect-server.sh --packages org.apache.spark:spark-connect_2.12:3.5.1` : This will start Spark running locally
+
    Optional: `tail -f <<fill in log name from console>>` : This will keep track of the logs coming from spark
+
 1. Install poetry for Python package management (e.g. `brew install poetry`)
 1. Download dependecies: `poetry init`
 
@@ -38,6 +42,7 @@ These can also be run/debugged from your IDE with 'Pytest Runner for Visual Stud
 - Need to be using at least 3.4 version of pypark to be able to use Spark Connect (e.g. 3.5.1 used here). More details: https://spark.apache.org/docs/latest/spark-connect-overview.html
 - Need the extra Spark Connect dependencies that aren't included in pyspark by default. See https://spark.apache.org/docs/latest/api/python/getting_started/install.html
       To get poetry to work with this, needed to add them explicitly:
+
       py4j = "^0.10.9.7"
       pandas = "^1.0.5"
       pyarrow = "^16.1.0"
