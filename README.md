@@ -17,7 +17,7 @@ It's not productionised code and just used for demonstration purposes.
    Optional: `tail -f <<fill in log name from console>>` : This will keep track of the logs coming from spark
 
 1. Install poetry for Python package management (e.g. `brew install poetry`)
-1. Download dependecies: `poetry init`
+1. Download dependecies, i.e. run this from terminal in the root directory of this repo: `poetry init`
 
 # Running unit tests
 Unit test run against the local version of spark that has been set up above.
